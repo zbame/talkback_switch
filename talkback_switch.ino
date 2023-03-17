@@ -17,6 +17,8 @@ void noteOff(byte channel, byte pitch, byte velocity) {
   MidiUSB.sendMIDI(noteOff);
 }
 
+// チャタリング防止のためのディレイタイム
+#define DELAY 100
 
 // ピンの設定
 const int button = 2;
@@ -27,6 +29,9 @@ const int note = 94;
 
 // ボタンの状態
 char st;
+
+//
+unsigned long tmp;
 
 void setup() {
 
@@ -42,6 +47,10 @@ void setup() {
 
 void loop() {
 
+  unsigned long tick;
+
+  tick = millis();
+
   // ボタンの監視
   switch(st) {
     case 0:
@@ -49,15 +58,27 @@ void loop() {
         // ボタンが押されたらノートオンメッセージを送信
         noteOn(0, note, 127);
         MidiUSB.flush();
+        tmp = tick + DELAY;
         st = 1;
       }
       break;
     case 1:
+      if (tick > tmp) {
+        st = 2;
+      }
+      break;
+    case 2:
       if (digitalRead(button) == HIGH) {
         // ボタンが離されたらノートオフメッセージを送信
         noteOff(0, note, 0);
         MidiUSB.flush();
-        st = 0;  
+        tmp = tick + DELAY;
+        st = 3;  
+      }
+      break;
+    case 3:
+      if (tick > tmp) {
+        st = 0;
       }
       break;
   }
